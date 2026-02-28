@@ -71,13 +71,6 @@ Set these in your Vercel project settings:
 
 - `ANTHROPIC_API_KEY` - Your Anthropic API key
 
-## Hackathon Tips
-
-✓ **15-second demo**: "Type any GitHub username, click analyze, see instant roast"
-✓ **Shareable**: Copy results button for tweet/socials
-✓ **Unique**: Real data + AI = both funny AND insightful
-✓ **Free**: Vercel free tier handles reasonable traffic
-
 ## License
 
 MIT 
