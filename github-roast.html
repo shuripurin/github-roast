@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Personality Autopsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #222222;
+    --accent: #e8ff00;
+    --accent2: #ff4d4d;
+    --text: #f0f0f0;
+    --muted: #666;
+    --mono: 'Space Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 80px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(52px, 10vw, 96px);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 12px;
+    letter-spacing: 0.1em;
+  }
+
+  /* Input area */
+  .search-box {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    max-width: 520px;
+    margin-bottom: 56px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+
+  .search-box input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-right: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 14px 18px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-box input::placeholder { color: var(--muted); }
+  .search-box input:focus { border-color: var(--accent); }
+
+  .search-box button {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: var(--display);
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    padding: 14px 24px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .search-box button:hover { background: #fff; }
+  .search-box button:active { transform: scale(0.98); }
+  .search-box button:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* Status */
+  #status {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    margin-bottom: 32px;
+    height: 16px;
+    text-align: center;
+  }
+
+  #status.loading { color: var(--accent); animation: blink 1s infinite; }
+  #status.error { color: var(--accent2); }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  /* Results card */
+  #result {
+    width: 100%;
+    max-width: 680px;
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  #result.visible { display: block; }
+
+  .card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    margin-bottom: 2px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 0;
+    border: 2px solid var(--accent);
+    object-fit: cover;
+  }
+
+  .profile-info { flex: 1; }
+  .profile-name {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  .profile-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+  }
+
+  .verdict-badge {
+    font-family: var(--display);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat {
+    padding: 18px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+
+  .stat-value {
+    font-family: var(--display);
+    font-size: 32px;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Languages */
+  .languages-section {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .lang-bars { display: flex; flex-direction: column; gap: 8px; }
+
+  .lang-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 40px;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+  }
+
+  .lang-name { color: var(--text); }
+
+  .lang-bar-bg {
+    height: 6px;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .lang-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    animation: growBar 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--delay, 0s);
+  }
+
+  @keyframes growBar {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  .lang-pct { color: var(--muted); text-align: right; font-size: 11px; }
+
+  /* Activity */
+  .activity-section {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .activity-grid {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+
+  .activity-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+
+  .activity-dot.lvl1 { background: #2a3300; }
+  .activity-dot.lvl2 { background: #5a7000; }
+  .activity-dot.lvl3 { background: #99bb00; }
+  .activity-dot.lvl4 { background: var(--accent); }
+
+  /* Roast section */
+  .roast-section {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .roast-section::before {
+    content: '// PERSONALITY AUTOPSY';
+    position: absolute;
+    top: -1px;
+    right: 24px;
+    background: var(--accent2);
+    color: #000;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    padding: 2px 8px;
+  }
+
+  .roast-text {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .roast-text .highlight {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  /* Score */
+  .score-section {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .scores-row { display: flex; gap: 32px; }
+
+  .score-item { }
+  .score-name {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .score-val {
+    font-family: var(--display);
+    font-size: 24px;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+
+  .score-val span { color: var(--muted); font-size: 16px; }
+
+  .final-diagnosis {
+    text-align: right;
+  }
+
+  .diagnosis-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .diagnosis-value {
+    font-family: var(--display);
+    font-size: 22px;
+    color: var(--accent2);
+    letter-spacing: 0.05em;
+  }
+
+  /* Footer */
+  .card-footer {
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0d0d0d;
+  }
+
+  .footer-text {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .share-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .share-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 520px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(2) { border-right: none; }
+    .stat:nth-child(3) { border-top: 1px solid var(--border); }
+    .scores-row { gap: 16px; }
+    h1 { font-size: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">✦ Powered by GitHub API + Claude AI</div>
+  <h1>GITHUB<br><span>AUTOPSY</span></h1>
+  <p class="subtitle">Enter a username. Receive the truth.</p>
+</header>
+
+<div class="search-box">
+  <input type="text" id="username" placeholder="github username..." autocomplete="off" />
+  <button id="analyzeBtn" onclick="analyze()">ANALYZE</button>
+</div>
+
+<div id="status"></div>
+
+<div id="result">
+  <div class="card">
+    <!-- Header -->
+    <div class="card-header">
+      <img id="avatar" class="avatar" src="" alt="avatar" />
+      <div class="profile-info">
+        <div class="profile-name" id="profileName">—</div>
+        <div class="profile-meta" id="profileMeta">—</div>
+      </div>
+      <div class="verdict-badge" id="verdictBadge">—</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-value" id="statRepos">—</div>
+        <div class="stat-label">Repos</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statStars">—</div>
+        <div class="stat-label">Total Stars</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statFollowers">—</div>
+        <div class="stat-label">Followers</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statAge">—</div>
+        <div class="stat-label">Yrs on GitHub</div>
+      </div>
+    </div>
+
+    <!-- Languages -->
+    <div class="languages-section">
+      <div class="section-label">Language Breakdown</div>
+      <div class="lang-bars" id="langBars">—</div>
+    </div>
+
+    <!-- Activity -->
+    <div class="activity-section">
+      <div class="section-label">Commit Activity — Last 52 Weeks</div>
+      <div class="activity-grid" id="activityGrid"></div>
+    </div>
+
+    <!-- Roast -->
+    <div class="roast-section">
+      <div class="section-label">Psychological Profile</div>
+      <div class="roast-text" id="roastText">Analyzing...</div>
+    </div>
+
+    <!-- Scores -->
+    <div class="score-section">
+      <div class="scores-row">
+        <div class="score-item">
+          <div class="score-name">Productivity</div>
+          <div class="score-val" id="scoreProductivity">—<span>/10</span></div>
+        </div>
+        <div class="score-item">
+          <div class="score-name">Chaos Level</div>
+          <div class="score-val" id="scoreChaos">—<span>/10</span></div>
+        </div>
+        <div class="score-item">
+          <div class="score-name">Employability</div>
+          <div class="score-val" id="scoreEmploy">—<span>/10</span></div>
+        </div>
+      </div>
+      <div class="final-diagnosis">
+        <div class="diagnosis-label">Final Diagnosis</div>
+        <div class="diagnosis-value" id="diagnosisValue">—</div>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <div class="footer-text" id="footerText">github-autopsy.dev</div>
+      <button class="share-btn" onclick="copyResult()">COPY RESULTS</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ANTHROPIC_API = '/api/claude';
+
+async function analyze() {
+  const username = document.getElementById('username').value.trim();
+  if (!username) return;
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  setStatus('FETCHING GITHUB DATA...', 'loading');
+  document.getElementById('result').classList.remove('visible');
+
+  try {
+    // Fetch user profile
+    const userRes = await fetch(`https://api.github.com/users/${username}`);
+    if (!userRes.ok) throw new Error(userRes.status === 404 ? 'USER NOT FOUND' : 'GITHUB API ERROR');
+    const user = await userRes.json();
+
+    // Fetch repos
+    const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`);
+    const repos = await reposRes.json();
+
+    // Fetch contribution activity
+    const activityRes = await fetch(`https://api.github.com/users/${username}/events/public?per_page=100`);
+    const events = await activityRes.json();
+
+    // Compute stats
+    const totalStars = repos.reduce((s, r) => s + r.stargazers_count, 0);
+    const accountAge = Math.round((Date.now() - new Date(user.created_at)) / (1000 * 60 * 60 * 24 * 365));
+
+    // Language breakdown
+    const langCount = {};
+    repos.forEach(r => { if (r.language) langCount[r.language] = (langCount[r.language] || 0) + 1; });
+    const totalLangRepos = Object.values(langCount).reduce((a, b) => a + b, 0);
+    const topLangs = Object.entries(langCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([lang, count]) => ({ lang, pct: Math.round(count / totalLangRepos * 100) }));
+
+    // Activity heatmap (weekly buckets from events)
+    const weeklyActivity = new Array(52).fill(0);
+    const now = Date.now();
+    events.forEach(e => {
+      const weeksAgo = Math.floor((now - new Date(e.created_at)) / (1000 * 60 * 60 * 24 * 7));
+      if (weeksAgo < 52) weeklyActivity[51 - weeksAgo]++;
+    });
+    const maxActivity = Math.max(...weeklyActivity, 1);
+
+    // Commit message samples
+    const commitMessages = events
+      .filter(e => e.type === 'PushEvent')
+      .slice(0, 10)
+      .flatMap(e => (e.payload.commits || []).map(c => c.message))
+      .slice(0, 8);
+
+    // Top repo names
+    const topRepoNames = repos.slice(0, 8).map(r => r.name);
+
+    setStatus('RUNNING PSYCHOLOGICAL ANALYSIS...', 'loading');
+
+    // Build AI prompt
+    const dataContext = `
+GitHub user: ${user.login}
+Name: ${user.name || 'No name set'}
+Bio: ${user.bio || 'No bio'}
+Public repos: ${user.public_repos}
+Followers: ${user.followers}, Following: ${user.following}
+Total stars received: ${totalStars}
+Account age: ${accountAge} years
+Top languages: ${topLangs.map(l => `${l.lang} (${l.pct}%)`).join(', ')}
+Recent repo names: ${topRepoNames.join(', ')}
+Recent commit messages: ${commitMessages.length > 0 ? commitMessages.map(m => `"${m.split('\n')[0].slice(0,60)}"`).join(', ') : 'no recent commits found'}
+Has website: ${user.blog ? 'yes' : 'no'}
+Company: ${user.company || 'none listed'}
+Location: ${user.location || 'unknown'}
+    `.trim();
+
+    const prompt = `You are a brutally honest but funny GitHub personality analyst. Analyze this GitHub user's data and write a short personality profile (3-4 sentences max, punchy and specific). Be roast-y but not mean-spirited. Reference specific details from their data.
+
+Then provide three numeric scores (integers 1-10):
+- Productivity score (based on activity, repos, stars)
+- Chaos level (based on commit messages, repo diversity, naming patterns)  
+- Employability score (based on stars, followers, bio, activity)
+
+And one "Final Diagnosis" — a 2-4 word darkly funny label for their developer archetype (e.g. "Recovering Tutorial Completionist", "Senior Stack Overflow Archaeologist", "Chaos Goblin with Imposter Syndrome", "Weekend Warrior, Monday Ghost").
+
+Respond ONLY in this JSON format:
+{
+  "roast": "...",
+  "productivity": 7,
+  "chaos": 4,
+  "employability": 6,
+  "diagnosis": "...",
+  "verdict": "..."
+}
+
+The "verdict" field should be a 1-3 word badge label like "PROLIFIC", "GHOST", "TRYHARD", "LEGEND", "VIBE CODER", etc.
+
+User data:
+${dataContext}`;
+
+    const aiRes = await fetch(ANTHROPIC_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const aiData = await aiRes.json();
+    const rawText = aiData.content[0].text;
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    const analysis = JSON.parse(jsonMatch[0]);
+
+    // Populate UI
+    document.getElementById('avatar').src = user.avatar_url;
+    document.getElementById('profileName').textContent = user.name || user.login;
+    document.getElementById('profileMeta').textContent = `@${user.login} · ${user.location || 'Location Unknown'} · Joined ${new Date(user.created_at).getFullYear()}`;
+    document.getElementById('verdictBadge').textContent = analysis.verdict;
+    document.getElementById('statRepos').textContent = user.public_repos;
+    document.getElementById('statStars').textContent = totalStars > 999 ? (totalStars/1000).toFixed(1)+'k' : totalStars;
+    document.getElementById('statFollowers').textContent = user.followers;
+    document.getElementById('statAge').textContent = accountAge;
+
+    // Languages
+    const langBars = document.getElementById('langBars');
+    if (topLangs.length === 0) {
+      langBars.innerHTML = '<span style="color:var(--muted);font-size:12px">No language data found</span>';
+    } else {
+      langBars.innerHTML = topLangs.map((l, i) => `
+        <div class="lang-row">
+          <div class="lang-name">${l.lang}</div>
+          <div class="lang-bar-bg"><div class="lang-bar-fill" style="width:${l.pct}%;--delay:${i*0.1}s"></div></div>
+          <div class="lang-pct">${l.pct}%</div>
+        </div>
+      `).join('');
+    }
+
+    // Activity heatmap
+    const grid = document.getElementById('activityGrid');
+    grid.innerHTML = weeklyActivity.map(v => {
+      const norm = v / maxActivity;
+      const lvl = norm === 0 ? '' : norm < 0.25 ? 'lvl1' : norm < 0.5 ? 'lvl2' : norm < 0.75 ? 'lvl3' : 'lvl4';
+      return `<div class="activity-dot ${lvl}" title="${v} events"></div>`;
+    }).join('');
+
+    // Roast
+    document.getElementById('roastText').textContent = analysis.roast;
+
+    // Scores
+    document.getElementById('scoreProductivity').innerHTML = `${analysis.productivity}<span>/10</span>`;
+    document.getElementById('scoreChaos').innerHTML = `${analysis.chaos}<span>/10</span>`;
+    document.getElementById('scoreEmploy').innerHTML = `${analysis.employability}<span>/10</span>`;
+    document.getElementById('diagnosisValue').textContent = analysis.diagnosis;
+
+    document.getElementById('footerText').textContent = `Generated ${new Date().toLocaleDateString()} · github-autopsy`;
+
+    setStatus('', '');
+    document.getElementById('result').classList.add('visible');
+
+  } catch (err) {
+    setStatus('ERROR: ' + err.message, 'error');
+  }
+
+  btn.disabled = false;
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = cls;
+}
+
+function copyResult() {
+  const name = document.getElementById('profileName').textContent;
+  const roast = document.getElementById('roastText').textContent;
+  const diag = document.getElementById('diagnosisValue').textContent;
+  const p = document.getElementById('scoreProductivity').textContent;
+  const c = document.getElementById('scoreChaos').textContent;
+  const e = document.getElementById('scoreEmploy').textContent;
+  const text = `GitHub Autopsy: ${name}\n\n${roast}\n\nDiagnosis: ${diag}\nProductivity: ${p} | Chaos: ${c} | Employability: ${e}\n\ngenerated by github-autopsy`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.share-btn');
+    btn.textContent = 'COPIED!';
+    setTimeout(() => btn.textContent = 'COPY RESULTS', 2000);
+  });
+}
+
+document.getElementById('username').addEventListener('keydown', e => {
+  if (e.key === 'Enter') analyze();
+});
+</script>
+</body>
+</html>
