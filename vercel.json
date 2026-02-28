@@ -1,6 +1,3 @@
 {
-  "buildCommand": "echo 'Build complete'",
-  "env": {
-    "ANTHROPIC_API_KEY": "@anthropic_api_key"
-  }
+  "buildCommand": "echo 'Build complete'"
 }
