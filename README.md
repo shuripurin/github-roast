@@ -80,8 +80,5 @@ Set these in your Vercel project settings:
 
 ## License
 
-MIT - Go forth and roast! 🔥
+MIT 
 
----
-
-Built for the hackathon. Roasting developers, one GitHub profile at a time.
