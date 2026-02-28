@@ -60,7 +60,7 @@ Visit `http://localhost:3000` and enter a GitHub username.
 
 ## Files
 
-- `github-roast.html` - Frontend UI (served statically)
+- `index.html` (renamed from `github-roast.html`) - Frontend UI (served statically)
 - `api/claude.js` - Serverless function that proxies to Claude API
 - `vercel.json` - Vercel configuration
 - `package.json` - Dependencies
